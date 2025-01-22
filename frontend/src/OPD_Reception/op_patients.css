@@ -1,0 +1,57 @@
+.actionv{
+    display: flex;
+    gap:20px;
+}a
+.actionv button{
+    padding:5px;
+    border: 1px solid black;
+    border-radius: 20px;
+    cursor: pointer;
+}
+.patientcontain1{
+
+    /* background-color:#c794dffd; */
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    justify-content: space-evenly;
+    padding-top: 20px;
+    padding: 10px;
+    margin-top: 20px;
+   
+}
+.opcon1{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+.action_color_block{
+    /* background-color: aqua; */
+    display: flex;
+    width: 80%;
+    height: 7%;
+
+}
+.action_color_block span{
+    float: left;
+    display: flex;
+    margin-left: 3%;
+    padding: 5px 5px;
+    font-size: 15px;
+    color: black;
+    font-weight: bold;
+    background: #6225e6;
+    box-shadow: 6px 6px 0 black;
+    transform: skewX(-15deg);
+    border: none;
+    cursor: pointer;
+    
+}
+
+
+
