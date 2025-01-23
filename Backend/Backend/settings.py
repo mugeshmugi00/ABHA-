@@ -99,7 +99,10 @@ CORS_ALLOW_HEADERS = [
     'Apipassword',  # Allow custom header api_password
     'Sessionid',
     'x-requested-with',
-    
+    'content-type',
+    'authorization',
+    'txnId',
+    'acctoken',  # Allow the acctoken header
     'request-id',  # Add lowercase 'request-id'
     'timestamp',
     'x-cm-id',

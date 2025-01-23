@@ -1624,32 +1624,36 @@ setMobileOtpVisible(true)
 
 }
 // -----------------------------------handleMobile_OtpSubmit--------------------
-const ABHA_Mobile_OTP = () =>{
-  
+const ABHA_Mobile_OTP = () => {
   console.log("Payload Sent to Backend:", {
     MobileOtp: Mobile_Otp,
     txnId: txnId,
     acctoken: accesstoken,
-});
-
-
-  axios.post(`${UrlLink}Frontoffice/ABHA_Mobile_OTP`, { 
-    MobileOtp:Mobile_Otp,
-    txnId: txnId,
-    acctoken: accesstoken,
-
-  })
-  .then((response) => {
-    const data = response.data;
-    console.log("Response from Mobile OTP server:", data);
-
-  })
-  .catch((error) => {
-    console.error("Error sending Mobile OTP:", error.response?.data || error.message);
   });
-  
-};
 
+  axios
+    .post(`${UrlLink}Frontoffice/ABHA_Mobile_OTP`, {
+      MobileOtp: Mobile_Otp,
+      txnId: txnId,
+      acctoken: accesstoken,
+    })
+    .then((response) => {
+      console.log("Response from Mobile OTP server:", response.data);
+
+      return axios.get(`${UrlLink}Frontoffice/ABHA_Address_Suggestion_API`, {
+        params: {  
+          txnId: txnId,
+          acctoken: accesstoken,
+        }
+      });
+    })
+    .then((suggestionResponse) => {
+      console.log("Response from Address Suggestion API:", suggestionResponse.data);
+    })
+    .catch((error) => {
+      console.error("Error:", error.response?.data || error.message);
+    });
+};
 // -----------------return---------------------------
   return (
     <div className="Main_container_app">

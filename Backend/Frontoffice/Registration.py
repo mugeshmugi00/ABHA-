@@ -8563,20 +8563,16 @@ def verifyOtpSubmit(request):
 
         
 # -------------------ABHA_Mobile_OTP----------------------
+
 @api_view(['POST'])
-@csrf_exempt    
+@csrf_exempt
 def ABHA_Mobile_OTP(request):
-    
-    print("Received Payload:", request.body)    
-    data = json.loads(request.body)
-    print("Parsed Data:", data) 
-    
-    access_token = data.get('acctoken')
-    txn_id = data.get('txnId')
+    print("Received Payload:", request.body)
+
     request_id = str(uuid.uuid4())
     timestamp = datetime.utcnow().isoformat() + 'Z'
 
-    # Load Public Key
+    # Public Key for OTP Encryption
     public_key_pem = """-----BEGIN PUBLIC KEY-----
     MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAstWB95C5pHLXiYW59qyO
     4Xb+59KYVm9Hywbo77qETZVAyc6VIsxU+UWhd/k/YtjZibCznB+HaXWX9TVTFs9N
@@ -8592,70 +8588,135 @@ def ABHA_Mobile_OTP(request):
     IzQpnSVDUVEzv17grVAw078CAwEAAQ==
     -----END PUBLIC KEY-----
     """
-    
-    try:
-        # Parse JSON input
-        data = json.loads(request.body)
-        MobileOtp = data.get('MobileOtp')
-        txn_id = data.get('txnId')
-        
-        print("otp:", MobileOtp)
-        print("txn_id:", txn_id)
+    public_key = serialization.load_pem_public_key(public_key_pem.encode())
 
-        
-        public_key = serialization.load_pem_public_key(public_key_pem.encode())
-        data_to_encrypt = MobileOtp
-        
-        encrypted_data = public_key.encrypt(
-            data_to_encrypt.encode(),
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                    algorithm=hashes.SHA1(),
-                    label=None
-                )
-            )
-        
-        # Convert encrypted data to base64 for easier handling
-        encrypted_base64 = base64.b64encode(encrypted_data).decode()
-        # Encrypt OTP
+    # if request.method == 'POST':
+    # try:
+    data = json.loads(request.body)
 
-        # Prepare the request payload for ABHA API
-        payload = {
-                    "scope": [
-                        "abha-enrol",
-                        "mobile-verify"
-                    ],
-                    "authData": {
-                        "authMethods": [
-                            "otp"
-                        ],
-                        "otp": {
-                            "timeStamp": timestamp,
-                            "txnId": txn_id,
-                            "otpValue": encrypted_base64
-                        }
-                    }
-                }
+    access_token = data.get('acctoken')
+    txn_id = data.get('txnId')
+    mobile_otp = data.get('MobileOtp')
 
-        # Send OTP verification request to ABHA API
-        response = requests.post(
-            "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/auth/byAbdm",
-            json=payload,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {access_token}",
-                "REQUEST-ID": request_id,
-                "TIMESTAMP": timestamp,
-            }
+    print("Parsed Data:", data)
+
+    encrypted_data = public_key.encrypt(
+        mobile_otp.encode(),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA1()),
+            algorithm=hashes.SHA1(),
+            label=None
         )
+    )
+    encrypted_base64 = base64.b64encode(encrypted_data).decode()
 
-        # Parse and return API response
-        if response:
-            return JsonResponse(response.json(), status=200)
-        else:
-            return JsonResponse({"error": "Failed to verify MobileOTP", "details": response.text}, status=response.status_code)
+    payload = {
+        "scope": ["abha-enrol", "mobile-verify"],
+        "authData": {
+            "authMethods": ["otp"],
+            "otp": {
+                "timeStamp": timestamp,
+                "txnId": txn_id,
+                "otpValue": encrypted_base64
+            }
+        }
+    }
+
+    response = requests.post(
+        "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/auth/byAbdm",
+        json=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "REQUEST-ID": request_id,
+            "TIMESTAMP": timestamp,
+        }
+    )
+
+    # if response.ok:
+    #     otp_verification_response = response.json()
         
-    except Exception as e:
-        return JsonResponse({"error": "An error occurred", "details": str(e)}, status=500)
+    #     suggestion_response = requests.get(
+    #         "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/suggestion",
+    #         headers={
+    #             "Content-Type": "application/json",
+    #             "Authorization": f"Bearer {access_token}",
+    #             "txnId": txn_id,
+    #             "REQUEST-ID": request_id,
+    #             "TIMESTAMP": timestamp,
+    #         }
+    #     )
+    #     print("access_token",access_token)
+    #     print("txn_id",txn_id)
+        
+
+    #     combined_response = {
+    #         "otp_verification": otp_verification_response
+    #     }
+
+    #     if suggestion_response.ok:
+    #         combined_response["enrol_suggestions"] = suggestion_response.json()
+    #     else:
+    #         combined_response["suggestion_error"] = suggestion_response.text
+
+    #     return JsonResponse(combined_response, status=200)
+
+    # else:
+    #     return JsonResponse({
+    #         "error": "Failed to verify MobileOTP", 
+    #         "details": response.text
+    #     }, status=response.status_code)
+
+    # except Exception as e:
+    #     return JsonResponse({
+    #         "error": "An error occurred", 
+    #         "details": str(e)
+    #     }, status=500)
+    if response:
+            response = response.json()
+            print(response)
+            return JsonResponse(response, status=200)
+    else:
+        print("Failed response:", response.json())
+        return Response(response.json(), status=400)
+
+
+    # return JsonResponse({"error": "Method not allowed"}, status=405)
+# -----------------------------------------------------------------------------
+@api_view(['GET'])
+@csrf_exempt
+def ABHA_Address_Suggestion_API(request):
     
+    access_token = request.GET.get('acctoken')
+    txn_id = request.GET.get('txnId')
     
+    print(f"Received access_token: {access_token}")
+    print(f"Received txn_id: {txn_id}")
+
+    
+    request_id = str(uuid.uuid4())
+    timestamp = datetime.utcnow().isoformat() + 'Z'
+
+
+    suggestion_response = requests.get(
+        "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/suggestion",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "txnId": txn_id,
+            "REQUEST-ID": request_id,
+            "TIMESTAMP": timestamp,
+        }
+    )
+
+    print("ABHA API Response Status:", suggestion_response.status_code)
+    print("ABHA API Response Headers:", suggestion_response.headers)
+    print("ABHA API Response Content:", suggestion_response.text)
+    
+    if suggestion_response.status_code == 200:
+        response_data = suggestion_response.json()
+        print(response_data)
+        return JsonResponse(response_data, status=200)
+    else:
+        print("Failed response:", suggestion_response.text)
+        return Response({"error": suggestion_response.text}, status=suggestion_response.status_code)
