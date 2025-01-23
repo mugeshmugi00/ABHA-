@@ -8393,33 +8393,19 @@ def encrypt_aadhaar(aadhaar_number, public_key):
 @api_view(['POST'])
 @csrf_exempt
 def abha_OTP_register(request):
+    
+    data = json.loads(request.body)
+    access_token = data.get('acctoken')
     request_id = str(uuid.uuid4())
-    print("Request ID:", request_id)
     timestamp = datetime.utcnow().isoformat() + 'Z'
-    print("timestamp:", timestamp)
+    phone_no = data.get('PhoneNo')
+    otp = data.get('otp')
+    txn_id = data.get('txnId')
 
-    # Get Access Token
-    token_response = requests.post(
-        "https://dev.abdm.gov.in/api/hiecm/gateway/v3/sessions",
-        json={
-            "clientId": "SBXID_007255",
-            "clientSecret": "286ced98-3001-41ac-8c32-7d9f5ca9cc3d",
-            "grantType": "client_credentials"
-        },
-        headers={
-            "Content-Type": "application/json",
-            "REQUEST-ID": request_id,
-            "TIMESTAMP": timestamp,
-            "X-CM-ID": "sbx"
-        }
-    )
-
-    # Check if token response is valid
-    if token_response:
-        token_data = token_response.json()
-        access_token = token_data.get('accessToken')
+    
+    if access_token:
         
-         # Load Public Key
+        # Load Public Key
         public_key_pem = """-----BEGIN PUBLIC KEY-----
         MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAstWB95C5pHLXiYW59qyO
         4Xb+59KYVm9Hywbo77qETZVAyc6VIsxU+UWhd/k/YtjZibCznB+HaXWX9TVTFs9N
@@ -8435,35 +8421,20 @@ def abha_OTP_register(request):
         IzQpnSVDUVEzv17grVAw078CAwEAAQ==
         -----END PUBLIC KEY-----
         """
-
+        
         try:
-            # Parse JSON input
-            data = json.loads(request.body)
-            phone_no = data.get('PhoneNo')
-            otp = data.get('otp')
-            txn_id = data.get('txnId')
-            
-            print("phone_no:", phone_no)
-            print("otp:", otp)
-            print("txn_id:", txn_id)
-
-            
-            public_key = serialization.load_pem_public_key(public_key_pem.encode())
-            data_to_encrypt = otp
-            
-            encrypted_data = public_key.encrypt(
-                data_to_encrypt.encode(),
-                    padding.OAEP(
-                        mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                        algorithm=hashes.SHA1(),
-                        label=None
-                    )
-                )
-            
-            # Convert encrypted data to base64 for easier handling
-            encrypted_base64 = base64.b64encode(encrypted_data).decode()
             # Encrypt OTP
-            # 6
+            public_key = serialization.load_pem_public_key(public_key_pem.encode())
+            encrypted_data = public_key.encrypt(
+                otp.encode(),
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                    algorithm=hashes.SHA1(),
+                    label=None
+                )
+            )
+            encrypted_base64 = base64.b64encode(encrypted_data).decode()
+            
 
             # Prepare the request payload for ABHA API
             payload = {
@@ -8493,178 +8464,198 @@ def abha_OTP_register(request):
                     "X-CM-ID": "sbx"
                 }
             )
-
-            # Parse and return API response
+            print("response",response.json())
+            
             if response:
-                return JsonResponse(response.json(), status=200)
+                return JsonResponse({
+                "response": response.json()
+            }, status=200)
             else:
-                return JsonResponse({"error": "Failed to verify OTP", "details": response.text}, status=response.status_code)
+                print("OTP API Error:", response.json())
+                return Response(response.json(), status=400)
+
             
         except Exception as e:
-            return JsonResponse({"error": "An error occurred", "details": str(e)}, status=500)
+            print(str(e))
+            return JsonResponse({"error": "Failed in block", "details": str(e)}, status=500)
+
+    else:
+        print("Token API Error:", access_token)
+        return JsonResponse({"error": "Failed to retrieve access token"})
+    
+# ------------------------------
+@api_view(['POST'])
+@csrf_exempt
+def verifyOtpSubmit(request):
+        data = json.loads(request.body)
+        access_token = data.get('acctoken')
+        request_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat() + 'Z'
+        phone_no = data.get('PhoneNo')
+        txn_id = data.get('txnId')
+    
+     # Load Public Key
+        public_key_pem = """-----BEGIN PUBLIC KEY-----
+        MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAstWB95C5pHLXiYW59qyO
+        4Xb+59KYVm9Hywbo77qETZVAyc6VIsxU+UWhd/k/YtjZibCznB+HaXWX9TVTFs9N
+        wgv7LRGq5uLczpZQDrU7dnGkl/urRA8p0Jv/f8T0MZdFWQgks91uFffeBmJOb58u
+        68ZRxSYGMPe4hb9XXKDVsgoSJaRNYviH7RgAI2QhTCwLEiMqIaUX3p1SAc178ZlN
+        8qHXSSGXvhDR1GKM+y2DIyJqlzfik7lD14mDY/I4lcbftib8cv7llkybtjX1Aayf
+        Zp4XpmIXKWv8nRM488/jOAF81Bi13paKgpjQUUuwq9tb5Qd/DChytYgBTBTJFe7i
+        rDFCmTIcqPr8+IMB7tXA3YXPp3z605Z6cGoYxezUm2Nz2o6oUmarDUntDhq/PnkN
+        ergmSeSvS8gD9DHBuJkJWZweG3xOPXiKQAUBr92mdFhJGm6fitO5jsBxgpmulxpG
+        0oKDy9lAOLWSqK92JMcbMNHn4wRikdI9HSiXrrI7fLhJYTbyU3I4v5ESdEsayHXu
+        iwO/1C8y56egzKSw44GAtEpbAkTNEEfK5H5R0QnVBIXOvfeF4tzGvmkfOO6nNXU3
+        o/WAdOyV3xSQ9dqLY5MEL4sJCGY1iJBIAQ452s8v0ynJG5Yq+8hNhsCVnklCzAls
+        IzQpnSVDUVEzv17grVAw078CAwEAAQ==
+        -----END PUBLIC KEY-----
+        """
         
-        # encrypt Phone_no
-        try:
-            data_to_encrypt = phone_no
-            
-            encrypted_phoneNo = public_key.encrypt(
-                    data_to_encrypt.encode(),
-                        padding.OAEP(
-                            mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                            algorithm=hashes.SHA1(),
-                            label=None
-                        )
-                    )
+        data_to_encrypt = phone_no
+        print("data_to_encrypt_PhoneNo:",data_to_encrypt)
+        
+        public_key = serialization.load_pem_public_key(public_key_pem.encode())
+        # Encrypt the phone number
+        encrypted_phoneNo = public_key.encrypt(
+            data_to_encrypt.encode(),
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                algorithm=hashes.SHA1(),
+                label=None
+            )
+        )
+        encrypted_base64mobile = base64.b64encode(encrypted_phoneNo).decode()
+        print("encrypted_base64mobile",encrypted_base64mobile)
+
+        # Prepare the request payload for mobile update
+        payload = {
+            "txnId": txn_id,
+            "scope": [
+                "abha-enrol",
+                "mobile-verify"
+            ],
+            "loginHint": "mobile",
+            "loginId": encrypted_base64mobile,
+            "otpSystem": "abdm"
+        }
+
+        print("Payload for mobile_update_OTP:", payload)
+
+        # Send mobile update request
+        response = requests.post(
+            "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp",
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+                "REQUEST-ID": request_id,
+                "TIMESTAMP": timestamp,
                 
-            encrypted_base64mobile = base64.b64encode(encrypted_phoneNo).decode()
-            
-            mobile_update = Response.post(
-                "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp",
-                json={
-                    "txnId": txn_id,
+            }
+        )
+        if response:
+            response = response.json()
+            print(response)
+            return JsonResponse(response, status=200)
+        else:
+            print("Failed to parse mobile update OTP response:", response.json())
+            return Response(response.json(), status=400)
+
+        
+# -------------------ABHA_Mobile_OTP----------------------
+@api_view(['POST'])
+@csrf_exempt    
+def ABHA_Mobile_OTP(request):
+    
+    print("Received Payload:", request.body)    
+    data = json.loads(request.body)
+    print("Parsed Data:", data) 
+    
+    access_token = data.get('acctoken')
+    txn_id = data.get('txnId')
+    request_id = str(uuid.uuid4())
+    timestamp = datetime.utcnow().isoformat() + 'Z'
+
+    # Load Public Key
+    public_key_pem = """-----BEGIN PUBLIC KEY-----
+    MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAstWB95C5pHLXiYW59qyO
+    4Xb+59KYVm9Hywbo77qETZVAyc6VIsxU+UWhd/k/YtjZibCznB+HaXWX9TVTFs9N
+    wgv7LRGq5uLczpZQDrU7dnGkl/urRA8p0Jv/f8T0MZdFWQgks91uFffeBmJOb58u
+    68ZRxSYGMPe4hb9XXKDVsgoSJaRNYviH7RgAI2QhTCwLEiMqIaUX3p1SAc178ZlN
+    8qHXSSGXvhDR1GKM+y2DIyJqlzfik7lD14mDY/I4lcbftib8cv7llkybtjX1Aayf
+    Zp4XpmIXKWv8nRM488/jOAF81Bi13paKgpjQUUuwq9tb5Qd/DChytYgBTBTJFe7i
+    rDFCmTIcqPr8+IMB7tXA3YXPp3z605Z6cGoYxezUm2Nz2o6oUmarDUntDhq/PnkN
+    ergmSeSvS8gD9DHBuJkJWZweG3xOPXiKQAUBr92mdFhJGm6fitO5jsBxgpmulxpG
+    0oKDy9lAOLWSqK92JMcbMNHn4wRikdI9HSiXrrI7fLhJYTbyU3I4v5ESdEsayHXu
+    iwO/1C8y56egzKSw44GAtEpbAkTNEEfK5H5R0QnVBIXOvfeF4tzGvmkfOO6nNXU3
+    o/WAdOyV3xSQ9dqLY5MEL4sJCGY1iJBIAQ452s8v0ynJG5Yq+8hNhsCVnklCzAls
+    IzQpnSVDUVEzv17grVAw078CAwEAAQ==
+    -----END PUBLIC KEY-----
+    """
+    
+    try:
+        # Parse JSON input
+        data = json.loads(request.body)
+        MobileOtp = data.get('MobileOtp')
+        txn_id = data.get('txnId')
+        
+        print("otp:", MobileOtp)
+        print("txn_id:", txn_id)
+
+        
+        public_key = serialization.load_pem_public_key(public_key_pem.encode())
+        data_to_encrypt = MobileOtp
+        
+        encrypted_data = public_key.encrypt(
+            data_to_encrypt.encode(),
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                    algorithm=hashes.SHA1(),
+                    label=None
+                )
+            )
+        
+        # Convert encrypted data to base64 for easier handling
+        encrypted_base64 = base64.b64encode(encrypted_data).decode()
+        # Encrypt OTP
+
+        # Prepare the request payload for ABHA API
+        payload = {
                     "scope": [
                         "abha-enrol",
                         "mobile-verify"
                     ],
-                    "loginHint": "mobile",
-                    "loginId": encrypt_PhoneNo(encrypted_base64mobile),
-                    "otpSystem": "abdm"
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "REQUEST-ID": request_id,
-                    "TIMESTAMP": timestamp,
-                    "X-CM-ID": "sbx"
+                    "authData": {
+                        "authMethods": [
+                            "otp"
+                        ],
+                        "otp": {
+                            "timeStamp": timestamp,
+                            "txnId": txn_id,
+                            "otpValue": encrypted_base64
+                        }
+                    }
                 }
-                ) 
-            if mobile_update:
-                    return JsonResponse(mobile_update.json(),status=200)
-            else:
-                return JsonResponse({"error": "Failed to verify OTP via mobile_update", "details": mobile_update.text}, status=mobile_update.status_code)
-        except Exception as e:
-            return JsonResponse({"error": "Failed to encrypt phone number API", "details": str(e)}, status=500)
-    
-    else:
-        print("Token API Error:", token_response.text)
-        return Response({"error": "Failed to retrieve access token"}, status=token_response.status_code)
-    
-    # ------------------------------
-# @api_view(['POST'])
-# @csrf_exempt    
-# def ABHA_Mobile_OTP(request):
-#     request_id = str(uuid.uuid4())
-#     print("Request ID:", request_id)
-#     timestamp = datetime.utcnow().isoformat() + 'Z'
-#     print("timestamp:", timestamp)
-    
-#     # Get Access Token
-#     token_response = requests.post(
-#         "https://dev.abdm.gov.in/api/hiecm/gateway/v3/sessions",
-#         json={
-#             "clientId": "SBXID_007255",
-#             "clientSecret": "286ced98-3001-41ac-8c32-7d9f5ca9cc3d",
-#             "grantType": "client_credentials"
-#         },
-#         headers={
-#             "Content-Type": "application/json",
-#             "REQUEST-ID": request_id,
-#             "TIMESTAMP": timestamp,
-#             "X-CM-ID": "sbx"
-#         }
-#     )
-    
-#     # Check if token response is valid
-#     if token_response:
-#         token_data = token_response.json()
-#         access_token = token_data.get('accessToken')
-        
-#          # Load Public Key
-#         public_key_pem = """-----BEGIN PUBLIC KEY-----
-#         MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAstWB95C5pHLXiYW59qyO
-#         4Xb+59KYVm9Hywbo77qETZVAyc6VIsxU+UWhd/k/YtjZibCznB+HaXWX9TVTFs9N
-#         wgv7LRGq5uLczpZQDrU7dnGkl/urRA8p0Jv/f8T0MZdFWQgks91uFffeBmJOb58u
-#         68ZRxSYGMPe4hb9XXKDVsgoSJaRNYviH7RgAI2QhTCwLEiMqIaUX3p1SAc178ZlN
-#         8qHXSSGXvhDR1GKM+y2DIyJqlzfik7lD14mDY/I4lcbftib8cv7llkybtjX1Aayf
-#         Zp4XpmIXKWv8nRM488/jOAF81Bi13paKgpjQUUuwq9tb5Qd/DChytYgBTBTJFe7i
-#         rDFCmTIcqPr8+IMB7tXA3YXPp3z605Z6cGoYxezUm2Nz2o6oUmarDUntDhq/PnkN
-#         ergmSeSvS8gD9DHBuJkJWZweG3xOPXiKQAUBr92mdFhJGm6fitO5jsBxgpmulxpG
-#         0oKDy9lAOLWSqK92JMcbMNHn4wRikdI9HSiXrrI7fLhJYTbyU3I4v5ESdEsayHXu
-#         iwO/1C8y56egzKSw44GAtEpbAkTNEEfK5H5R0QnVBIXOvfeF4tzGvmkfOO6nNXU3
-#         o/WAdOyV3xSQ9dqLY5MEL4sJCGY1iJBIAQ452s8v0ynJG5Yq+8hNhsCVnklCzAls
-#         IzQpnSVDUVEzv17grVAw078CAwEAAQ==
-#         -----END PUBLIC KEY-----
-#         """
-        
-#         try:
-#             # Parse JSON input
-#             data = json.loads(request.body)
-#             phone_no = data.get('PhoneNo')
-#             MobileOtp = data.get('MobileOtp')
-#             txn_id = data.get('txnId')
-            
-#             print("phone_no:", phone_no)
-#             print("otp:", MobileOtp)
-#             print("txn_id:", txn_id)
 
-            
-#             public_key = serialization.load_pem_public_key(public_key_pem.encode())
-#             data_to_encrypt = MobileOtp
-            
-#             encrypted_data = public_key.encrypt(
-#                 data_to_encrypt.encode(),
-#                     padding.OAEP(
-#                         mgf=padding.MGF1(algorithm=hashes.SHA1()),
-#                         algorithm=hashes.SHA1(),
-#                         label=None
-#                     )
-#                 )
-            
-#             # Convert encrypted data to base64 for easier handling
-#             encrypted_base64 = base64.b64encode(encrypted_data).decode()
-#             # Encrypt OTP
-#             # 6
+        # Send OTP verification request to ABHA API
+        response = requests.post(
+            "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/auth/byAbdm",
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+                "REQUEST-ID": request_id,
+                "TIMESTAMP": timestamp,
+            }
+        )
 
-#             # Prepare the request payload for ABHA API
-#             payload = {
-#                 "scope": [
-#                     "abha-enrol",
-#                     "mobile-verify"
-#                 ],
-#                 "authData": {
-#                     "authMethods": [
-#                         "otp"
-#                     ],
-#                     "otp": {
-#                         "timeStamp": "{{current_timestamp}}",
-#                         "txnId": txn_id,
-#                         "otpValue": encrypted_base64
-#                     }
-#                 }
-#             }
-
-#             # Send OTP verification request to ABHA API
-#             response = requests.post(
-#                 "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/auth/byAbdm",
-#                 json=payload,
-#                 headers={
-#                     "Content-Type": "application/json",
-#                     "Authorization": f"Bearer {access_token}",
-#                     "REQUEST-ID": request_id,
-#                     "TIMESTAMP": timestamp,
-#                     "X-CM-ID": "sbx"
-#                 }
-#             )
-
-#             # Parse and return API response
-#             if response:
-#                 return JsonResponse(response.json(), status=200)
-#             else:
-#                 return JsonResponse({"error": "Failed to verify MobileOTP", "details": response.text}, status=response.status_code)
-            
-#         except Exception as e:
-#             return JsonResponse({"error": "An error occurred", "details": str(e)}, status=500)
+        # Parse and return API response
+        if response:
+            return JsonResponse(response.json(), status=200)
+        else:
+            return JsonResponse({"error": "Failed to verify MobileOTP", "details": response.text}, status=response.status_code)
         
-        
-#     else:
-#         print("Token API Error:", token_response.text)
-#         return Response({"error": "Failed to retrieve access token"}, status=token_response.status_code)
+    except Exception as e:
+        return JsonResponse({"error": "An error occurred", "details": str(e)}, status=500)
+    
+    

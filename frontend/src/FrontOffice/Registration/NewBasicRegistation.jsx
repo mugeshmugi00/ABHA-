@@ -75,9 +75,10 @@ const NewBasicRegistation = () => {
   console.log(PatientRegisterDetails, "PatientRegisterDetails");
 
   // ---------------------ABHA----------------------
-  const [otpVisible, setOtpvisible] = useState(false); // To toggle OTP input visibility
+  const [otpVisible, setOtpvisible] = useState(false); 
+  const [MobileOtpVisible, setMobileOtpVisible] = useState(false);// To toggle OTP input visibility
   const [otp, setOtp] = useState(""); // To store OTP value
-  const [Mobile_otp, setMobile_otp] = useState(""); // To store OTP value
+  const [Mobile_Otp, setMobile_Otp] = useState(""); // To store OTP value
   const timestamp = new Date().toISOString();
   const [txnId, setTxnId] = useState('');
   const [accesstoken, setAccesstoken] = useState('');
@@ -1509,58 +1510,10 @@ const NewBasicRegistation = () => {
   const handleOtpChange = (e) => {
     setOtp(e.target.value);
   };
-  // -----------------------------------handleMobile_OtpSubmit--------------------
-  const handleMobile_OtpSubmit = () =>{
-    console.log("Mobile OTP Submitted:",Mobile_otp)
-
-  //   axios.post(`${UrlLink}Frontoffice/ABHA_Mobile_OTP`, { 
-  //     MobileOtp:Mobile_otp,
-
-  //   })
-  //   .then((response) => {
-  //     const data = response.data;
-  //     console.log("Response from Mobile OTP server:", data);
-
-  // })
-  // .catch((error) => {
-  //   console.error("Error sending Mobile OTP:", error.response?.data || error.message);
-  // });
-
+  const handle_OtpChange = (e) => {
+    setMobile_Otp(e.target.value);
   };
-// -------------------------ABHA OTP----------------------
-const handleOtpSubmit = () => {
-  console.log("OTP Submitted:", otp);
-  console.log("Phone Number:", RegisterData.PhoneNo);
-  console.log("Payload being sent:", { otp });
-  console.log("Transaction ID:", txnId);
-
-
-  // First Axios POST request to send OTP
-  axios.post(`${UrlLink}Frontoffice/abha_OTP_register`, { 
-    otp:otp,
-    PhoneNo:RegisterData.PhoneNo,
-    txnId:txnId,
-    acctoken:accesstoken,
-
-   })
-      .then((response) => {
-          const data = response.data;
-          console.log("Response from OTP server:", data);
-
-      })
-      .catch((error) => {
-        if (error.response) {
-          console.error("Error sending OTP:", error.response.data); // Log the response data from the server
-          console.error("Error status:", error.response.status); // Log the status code
-        } else if (error.request) {
-          // The request was made but no response was received
-          console.error("Error sending OTP - No response:", error.request);
-        } else {
-          // Something happened in setting up the request that triggered an Error
-          console.error("Error sending OTP - Request setup:", error.message);
-        }
-      });
-};
+  
 
   // -----------------------ABHAsubmit---------------------------
   const ABHAsubmit = () => {
@@ -1579,14 +1532,19 @@ const handleOtpSubmit = () => {
             aadhaar_number: RegisterData.UHIDNo, // Ensure this matches the backend key
           })
           .then((response) => {
+            console.log(response.data)
             console.log("Public key and Aadhaar number sent successfully:", response.data.otp_response);
 
              const { txnId } = response.data.otp_response;
-             const { access_token } = response.data.access_token;
+             const data34 = response.data.access_token;
+             console.log(data34)
              setTxnId(txnId);
-             setAccesstoken(access_token)
+             setAccesstoken(data34)
 
              console.log("txnId:", txnId);
+            //  console.log("access_token:", access_token);
+
+          
 
           })
           .catch((error) => {
@@ -1597,6 +1555,100 @@ const handleOtpSubmit = () => {
       //   console.error("Error fetching public key:", error.response?.data || error.message);
       // });
   };
+  // -------------------------ABHA OTP----------------------
+const handleOtpSubmit = () => {
+  console.log("access_token:", accesstoken);
+  // Ensure accesstoken and txnId are available before proceeding
+  if (!accesstoken || !txnId) {
+    console.error("Error: Access token or Transaction ID is missing!");
+    return;
+  }
+
+  console.log("OTP Submitted:", otp);
+  console.log("Phone Number:", RegisterData.PhoneNo);
+  console.log("Payload being sent:", { otp });
+  console.log("Transaction ID:", txnId);
+  console.log("access_token:", accesstoken);
+
+  // Axios POST request to send OTP
+  axios
+    .post(`${UrlLink}Frontoffice/abha_OTP_register`, {
+      otp: otp,
+      PhoneNo: RegisterData.PhoneNo,
+      txnId: txnId,
+      acctoken: accesstoken,
+    })
+    .then((response) => {
+      const data = response.data;
+      console.log("OTP verified successfully:", data);
+    })
+    .catch((error) => {
+      if (error.response) {
+        console.error("Error sending OTP:", error.response.data);
+        console.error("Error status:", error.response.status);
+      } else if (error.request) {
+        console.error("Error sending OTP - No response:", error.request);
+      } else {
+        console.error("Error sending OTP - Request setup:", error.message);
+      }
+    });
+};
+// ------------------------verifyOtpSubmit--------------------------
+const verifyOtpSubmit = () =>{
+setMobileOtpVisible(true)
+  console.log("Phone Number:", RegisterData.PhoneNo);
+  console.log("Transaction ID:", txnId);
+  console.log("access_token:", accesstoken);
+
+  axios
+    .post(`${UrlLink}Frontoffice/verifyOtpSubmit`, {
+      otp: otp,
+      PhoneNo: RegisterData.PhoneNo,
+      txnId: txnId,
+      acctoken: accesstoken,
+    })
+    .then((response) => {
+      const data = response.data;
+      console.log("OTP verified successfully:", data);
+    })
+    .catch((error) => {
+      if (error.response) {
+        console.error("Error sending OTP:", error.response.data);
+        console.error("Error status:", error.response.status);
+      } else if (error.request) {
+        console.error("Error sending OTP - No response:", error.request);
+      } else {
+        console.error("Error sending OTP - Request setup:", error.message);
+      }
+    });
+
+}
+// -----------------------------------handleMobile_OtpSubmit--------------------
+const ABHA_Mobile_OTP = () =>{
+  
+  console.log("Payload Sent to Backend:", {
+    MobileOtp: Mobile_Otp,
+    txnId: txnId,
+    acctoken: accesstoken,
+});
+
+
+  axios.post(`${UrlLink}Frontoffice/ABHA_Mobile_OTP`, { 
+    MobileOtp:Mobile_Otp,
+    txnId: txnId,
+    acctoken: accesstoken,
+
+  })
+  .then((response) => {
+    const data = response.data;
+    console.log("Response from Mobile OTP server:", data);
+
+  })
+  .catch((error) => {
+    console.error("Error sending Mobile OTP:", error.response?.data || error.message);
+  });
+  
+};
 
 // -----------------return---------------------------
   return (
@@ -2128,25 +2180,30 @@ const handleOtpSubmit = () => {
                         <div className="Main_container_Btn" style={{width:"79px"}}>
                         <button onClick={handleOtpSubmit}>Submit OTP</button>
                         </div>
+                        
                       </div>
+                      
                     )}
-                    
-                    {/* mobile OTP
-                    {otpVisible && (
+                      <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={verifyOtpSubmit}>verify OTP</button>
+                      </div>
+                    {/* mobile OTP */}
+                    {MobileOtpVisible && (
                       <div className="RegisForm_1">
                         <label htmlFor="otpInput">Enter Mobile OTP:</label>
                         <input
                           id="otpInput"
                           type="text"
                           maxLength={6}
-                          value={otp}
-                          onChange={handleOtpChange}
+                          name="Mobile_Otp"
+                          value={Mobile_Otp}
+                          onChange={handle_OtpChange}
                         />
                         <div className="Main_container_Btn" style={{width:"79px"}}>
-                        <button onClick={handleMobile_OtpSubmit}>Submit OTP</button>
+                        <button onClick={ABHA_Mobile_OTP}>Submit OTP</button>
                         </div>
                       </div>
-                    )} */}
+                    )} 
 
             </div>
 

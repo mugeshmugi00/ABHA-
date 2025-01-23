@@ -182,6 +182,7 @@ urlpatterns=[
     # ABHA
     path('abha_register',abha_register,name='abha_register'),
     path('abha_OTP_register',abha_OTP_register,name='abha_OTP_register'),
-    # path('ABHA_Mobile_OTP',ABHA_Mobile_OTP,name='ABHA_Mobile_OTP')
+    path('verifyOtpSubmit',verifyOtpSubmit,name='verifyOtpSubmit'),
+    path('ABHA_Mobile_OTP',ABHA_Mobile_OTP,name='ABHA_Mobile_OTP')
 
     ]
