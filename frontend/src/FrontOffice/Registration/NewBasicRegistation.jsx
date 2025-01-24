@@ -47,6 +47,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 
+
 const NewBasicRegistation = () => {
   const UrlLink = useSelector((state) => state.userRecord?.UrlLink);
   const Registeredit = useSelector((state) => state.Frontoffice?.Registeredit);
@@ -79,9 +80,15 @@ const NewBasicRegistation = () => {
   const [MobileOtpVisible, setMobileOtpVisible] = useState(false);// To toggle OTP input visibility
   const [otp, setOtp] = useState(""); // To store OTP value
   const [Mobile_Otp, setMobile_Otp] = useState(""); // To store OTP value
+  const [abhadd, setAbhaadd] = useState(""); // To store OTP value
   const timestamp = new Date().toISOString();
   const [txnId, setTxnId] = useState('');
   const [accesstoken, setAccesstoken] = useState('');
+  const [xToken, setXtoken] = useState("");
+  const [responseData, setResponseData] = useState(null); // To store the data
+  const [error, setError] = useState(null); 
+  const [popupVisible, setPopupVisible] = useState(false);
+
 
 
   const [loading, setLoading] = useState(false);
@@ -1559,10 +1566,7 @@ const NewBasicRegistation = () => {
 const handleOtpSubmit = () => {
   console.log("access_token:", accesstoken);
   // Ensure accesstoken and txnId are available before proceeding
-  if (!accesstoken || !txnId) {
-    console.error("Error: Access token or Transaction ID is missing!");
-    return;
-  }
+
 
   console.log("OTP Submitted:", otp);
   console.log("Phone Number:", RegisterData.PhoneNo);
@@ -1581,6 +1585,15 @@ const handleOtpSubmit = () => {
     .then((response) => {
       const data = response.data;
       console.log("OTP verified successfully:", data);
+      console.log("Response Data:", data);
+
+      console.log("Xtoken",response.data.response.tokens.token)
+      const newXToken = response.data.response.tokens.token; // Extract the token
+
+      setXtoken(newXToken); // Store the token in state
+      console.log("Stored X_token:", newXToken);
+      
+   
     })
     .catch((error) => {
       if (error.response) {
@@ -1624,36 +1637,144 @@ setMobileOtpVisible(true)
 
 }
 // -----------------------------------handleMobile_OtpSubmit--------------------
-const ABHA_Mobile_OTP = () => {
-  console.log("Payload Sent to Backend:", {
+const ABHA_Mobile_OTP = async () => {
+  const payload = {
     MobileOtp: Mobile_Otp,
     txnId: txnId,
     acctoken: accesstoken,
+  };
+
+  console.log("Payload Sent to Backend:", payload);
+
+  try {
+    // Sending the first POST request
+    const response = await axios.post(`${UrlLink}Frontoffice/ABHA_Mobile_OTP`, payload);
+
+    console.log("Response from Mobile OTP server:", response.data);
+
+  } 
+  catch (error) {
+    if (error.response) {
+      console.error("Server Error:", error.response.data);
+      console.error("HTTP Status Code:", error.response.status);
+    } else if (error.request) {
+      console.error("No Response from Server:", error.request);
+    } else {
+      console.error("Error:", error.message);
+    }
+  }
+};
+
+// ----------------------------------------------------------------------------------
+const ABHA_Address_Suggestion_API = () => {
+ 
+  console.log("txnId", txnId);
+  console.log("accesstoken", accesstoken);
+  const data_to_send ={
+    txnId: txnId,
+    acctoken: accesstoken,
+    abhaaddress:abhadd,
+
+  }
+
+  // Step 1: Make GET request to ABHA API
+  axios.post(`${UrlLink}Frontoffice/ABHA_Address_Suggestion_API`, data_to_send)
+  .then((suggestionResponse) => {
+    console.log("Response from Address Suggestion API:", suggestionResponse.data);
+
+    // // Step 2: Directly select the first address from abhaAddressList
+    // const abhaAddressList = suggestionResponse.data.abhaAddressList;
+    // const abhaAddress = abhaAddressList[0];  // Always select the first address
+
+    // console.log("Selected ABHA Address:", abhaAddress);
+
+  })
+  .catch((error) => {
+    if (error.response) {
+      console.error("Error status:", error.response.status);
+      console.error("Error details:", error.response.data);
+    } else if (error.request) {
+      console.error("No response received:", error.request);
+    } else {
+      console.error("Error setting up request:", error.message);
+    }
   });
 
-  axios
-    .post(`${UrlLink}Frontoffice/ABHA_Mobile_OTP`, {
-      MobileOtp: Mobile_Otp,
-      txnId: txnId,
-      acctoken: accesstoken,
-    })
-    .then((response) => {
-      console.log("Response from Mobile OTP server:", response.data);
-
-      return axios.get(`${UrlLink}Frontoffice/ABHA_Address_Suggestion_API`, {
-        params: {  
-          txnId: txnId,
-          acctoken: accesstoken,
-        }
-      });
-    })
-    .then((suggestionResponse) => {
-      console.log("Response from Address Suggestion API:", suggestionResponse.data);
-    })
-    .catch((error) => {
-      console.error("Error:", error.response?.data || error.message);
-    });
+   
 };
+// ----------------------------ABHA_card------------------------------------
+const ABHA_card = () => {  
+  const data_to_send ={
+    acctoken: accesstoken,
+    xToken:xToken
+
+  }
+  // setPopupVisible(true);
+  // setLoading(true); 
+  axios.post(`${UrlLink}Frontoffice/ABHA_card`, data_to_send)
+  .then((Response) => {
+    console.log("Response from  API:", Response.data);
+  })
+  // .then(response1 => {
+  //   const responseData1 = response1.data;
+  //   console.log("First response:", responseData1);
+
+  //   const combinedData = {
+  //     account_data: responseData1,
+  //     // abha_card_data: responseData2,
+  //   };
+  //     setResponseData(combinedData);
+  //     setLoading(false);
+  // })
+  .catch(error => {
+    console.error("Error:", error);
+    alert("Error occurred while fetching data.");
+    setLoading(false); 
+  });
+  
+};
+const closePopup = () => {
+  setPopupVisible(false); // Close the popup
+  setResponseData(null); // Reset the response data
+  setError(null);
+};
+const styles = {
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  popup: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    width: '400px',
+    maxWidth: '90%',
+    textAlign: 'left',
+    position: 'relative',
+    overflowY: 'auto',
+  },
+  closeButton: {
+    backgroundColor: 'red',
+    color: 'white',
+    border: 'none',
+    padding: '5px 10px',
+    cursor: 'pointer',
+    borderRadius: '5px',
+    position: 'absolute',
+    top: '10px',
+    right: '10px',
+  },
+};
+
+
 // -----------------return---------------------------
   return (
     <div className="Main_container_app">
@@ -2188,11 +2309,11 @@ const ABHA_Mobile_OTP = () => {
                       </div>
                       
                     )}
-                      <div className="Main_container_Btn" style={{width:"79px"}}>
+                      {/* <div className="Main_container_Btn" style={{width:"79px"}}>
                         <button onClick={verifyOtpSubmit}>verify OTP</button>
-                      </div>
+                      </div> */}
                     {/* mobile OTP */}
-                    {MobileOtpVisible && (
+                    {/* {MobileOtpVisible && (
                       <div className="RegisForm_1">
                         <label htmlFor="otpInput">Enter Mobile OTP:</label>
                         <input
@@ -2207,8 +2328,52 @@ const ABHA_Mobile_OTP = () => {
                         <button onClick={ABHA_Mobile_OTP}>Submit OTP</button>
                         </div>
                       </div>
-                    )} 
+                      
+                    )}  */}
+                    {/* <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={ABHA_Address_Suggestion_API}>Suggestion</button>
+                    </div> */}
 
+                    {/* <div className="RegisForm_1">
+                        <label htmlFor="otpInput">Abha Address:</label>
+                        <input
+                          id="otpInput"
+                          type="text"
+                          name="abhadd"
+                          value={abhadd}
+                          onChange={(e)=>setAbhaadd(e.target.value)}
+                        />
+                        <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={ABHA_Address_Suggestion_API}>Submit add</button>
+                        </div>
+                      </div>
+                       */}
+                    <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={ABHA_card}>ABHA CARD</button>
+                    </div>
+
+                    {/* {popupVisible && (
+                      <div style={styles.overlay}>
+                        <div style={styles.popup}>
+                          <button style={styles.closeButton} onClick={closePopup}>Close</button>
+
+                          {loading && <p>Loading data...</p>}
+
+                          {error && <p style={{ color: 'red' }}>{error}</p>}
+
+                          {responseData && (
+                            <div>
+                              <h3>Account Data:</h3>
+                              <pre>{JSON.stringify(responseData.account_data, null, 2)}</pre>
+
+                              <h3>ABHA Card Data:</h3>
+                              <pre>{JSON.stringify(responseData.abha_card_data, null, 2)}</pre>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )} 
+                    */}
             </div>
 
 

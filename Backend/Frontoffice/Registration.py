@@ -8247,6 +8247,7 @@ import base64
 from datetime import datetime
 import uuid
 
+
 @api_view(['POST'])
 @csrf_exempt
 def abha_register(request):
@@ -8401,6 +8402,8 @@ def abha_OTP_register(request):
     phone_no = data.get('PhoneNo')
     otp = data.get('otp')
     txn_id = data.get('txnId')
+    
+  
 
     
     if access_token:
@@ -8555,6 +8558,10 @@ def verifyOtpSubmit(request):
         )
         if response:
             response = response.json()
+            
+            x_token = response.get('xToken')
+            print("x_token:",x_token)
+            
             print(response)
             return JsonResponse(response, status=200)
         else:
@@ -8586,12 +8593,11 @@ def ABHA_Mobile_OTP(request):
     iwO/1C8y56egzKSw44GAtEpbAkTNEEfK5H5R0QnVBIXOvfeF4tzGvmkfOO6nNXU3
     o/WAdOyV3xSQ9dqLY5MEL4sJCGY1iJBIAQ452s8v0ynJG5Yq+8hNhsCVnklCzAls
     IzQpnSVDUVEzv17grVAw078CAwEAAQ==
-    -----END PUBLIC KEY-----
-    """
+    -----END PUBLIC KEY-----"""
+
+    # Load the public key
     public_key = serialization.load_pem_public_key(public_key_pem.encode())
 
-    # if request.method == 'POST':
-    # try:
     data = json.loads(request.body)
 
     access_token = data.get('acctoken')
@@ -8600,6 +8606,7 @@ def ABHA_Mobile_OTP(request):
 
     print("Parsed Data:", data)
 
+    # Encrypt the OTP
     encrypted_data = public_key.encrypt(
         mobile_otp.encode(),
         padding.OAEP(
@@ -8610,6 +8617,7 @@ def ABHA_Mobile_OTP(request):
     )
     encrypted_base64 = base64.b64encode(encrypted_data).decode()
 
+    # Prepare payload for OTP verification
     payload = {
         "scope": ["abha-enrol", "mobile-verify"],
         "authData": {
@@ -8622,7 +8630,8 @@ def ABHA_Mobile_OTP(request):
         }
     }
 
-    response = requests.post(
+    # Send OTP verification request
+    responsed = requests.post(
         "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/auth/byAbdm",
         json=payload,
         headers={
@@ -8632,91 +8641,170 @@ def ABHA_Mobile_OTP(request):
             "TIMESTAMP": timestamp,
         }
     )
-
-    # if response.ok:
-    #     otp_verification_response = response.json()
-        
-    #     suggestion_response = requests.get(
-    #         "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/suggestion",
-    #         headers={
-    #             "Content-Type": "application/json",
-    #             "Authorization": f"Bearer {access_token}",
-    #             "txnId": txn_id,
-    #             "REQUEST-ID": request_id,
-    #             "TIMESTAMP": timestamp,
-    #         }
-    #     )
-    #     print("access_token",access_token)
-    #     print("txn_id",txn_id)
-        
-
-    #     combined_response = {
-    #         "otp_verification": otp_verification_response
-    #     }
-
-    #     if suggestion_response.ok:
-    #         combined_response["enrol_suggestions"] = suggestion_response.json()
-    #     else:
-    #         combined_response["suggestion_error"] = suggestion_response.text
-
-    #     return JsonResponse(combined_response, status=200)
-
-    # else:
-    #     return JsonResponse({
-    #         "error": "Failed to verify MobileOTP", 
-    #         "details": response.text
-    #     }, status=response.status_code)
-
-    # except Exception as e:
-    #     return JsonResponse({
-    #         "error": "An error occurred", 
-    #         "details": str(e)
-    #     }, status=500)
-    if response:
-            response = response.json()
-            print(response)
-            return JsonResponse(response, status=200)
+    
+    if responsed:
+        response_data = responsed.json()
+        print(response_data)
+        return JsonResponse(response_data)
     else:
-        print("Failed response:", response.json())
-        return Response(response.json(), status=400)
+        print("Failed to parse mobile update OTP response:", responsed.text)
+        return JsonResponse({"error": "OTP Verification Failed", "details": responsed.text}, status=400)
 
+# ---------------------------------------------------------
 
-    # return JsonResponse({"error": "Method not allowed"}, status=405)
-# -----------------------------------------------------------------------------
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @csrf_exempt
 def ABHA_Address_Suggestion_API(request):
     
-    access_token = request.GET.get('acctoken')
-    txn_id = request.GET.get('txnId')
+    print("Received Payload:", request.body)
     
+    data = json.loads(request.body)
+    
+    access_token = data.get('acctoken')  
+    txn_id = data.get('txnId')
+    abha_address=data.get("abhaaddress")
+
     print(f"Received access_token: {access_token}")
     print(f"Received txn_id: {txn_id}")
+    print(f"Received txn_id: {abha_address}")
 
+    request_id = str(uuid.uuid4())
+    timestampww = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    print("timestampww",timestampww)
+
+    # if request.method == 'POST':
+    print("GET method called: Making the request to ABHA API for address suggestion")
+    
+
+    # suggestion_response = requests.get(
+    #     "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/suggestion",
+    #     headers={
+    #         "Authorization": f"Bearer {access_token}",
+    #         "txnId": txn_id,
+    #         "REQUEST-ID": request_id,
+    #         "TIMESTAMP": timestampww,
+    #     }
+    # )
+    
+    # print("ABHA API Response Status:", suggestion_response)
+    # print("ABHA API Response Headers:", suggestion_response.content)
+    # print("ABHA API Response Content:", suggestion_response.text)
+
+    # if suggestion_response:
+    #     response_data = suggestion_response.json()
+        
+    #     abha_address_list = response_data.get('abhaAddressList', [])
+    #     if abha_address_list:
+    #         abha_address = abha_address_list[0]  # Use the first address
+    #         print("Selected ABHA Address:", abha_address)
+
+    #         print("GET request completed successfully, making the POST request now")
+
+    try:
+        post_data = {
+            "txnId": txn_id,
+            "abhaAddress": abha_address,
+            "preferred": 1,
+        }
+
+        post_response = requests.post(
+            "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/abha-address",
+            json=post_data,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+                "REQUEST-ID": request_id,
+                "TIMESTAMP": timestampww,
+            },
+            
+        )
+
+        print("ABHA API POST Response Status:", post_response)
+        print("ABHA API POST Response Content:", post_response.text)
+
+        if post_response:
+            return JsonResponse(post_response.json())  # Return the successful response from POST
+        else:
+            return JsonResponse({"error": post_response.text}, status=400)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+        # else:
+        #     return JsonResponse({"error": "No ABHA addresses found in response"}, status=400)
+
+    # else:
+    #     return JsonResponse({"error": suggestion_response.text}, status=400)
+
+    # Logic for POST method (this part can be omitted as it is already handled after GET)
+    # elif request.method == 'POST':
+    #     return JsonResponse({"error": "POST method should not be directly called in this scenario"}, status=400)
+    
+    # if suggestion_response:
+    #     return JsonResponse(suggestion_response.json())  # Return the successful response from POST
+    # else:
+    #     return JsonResponse({"error": suggestion_response.text}, status=400)
+    
+    
+    
+# -----------------------------------ABHA_card-----------------------------------------
+@api_view(['POST'])
+@csrf_exempt
+def ABHA_card(request):
+    data = json.loads(request.body)
+    access_token = data.get('acctoken')
+    X_token = data.get('xToken')
+    
+    print("X_token",X_token)
+    print("access_token",access_token)
     
     request_id = str(uuid.uuid4())
     timestamp = datetime.utcnow().isoformat() + 'Z'
-
-
-    suggestion_response = requests.get(
-        "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/suggestion",
+    
+    # First GET request
+    responsed_1 = requests.get(
+        "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account",
         headers={
-            "Content-Type": "application/json",
             "Authorization": f"Bearer {access_token}",
-            "txnId": txn_id,
             "REQUEST-ID": request_id,
             "TIMESTAMP": timestamp,
+            "X-Token":f"Bearer {X_token}"
         }
     )
-
-    print("ABHA API Response Status:", suggestion_response.status_code)
-    print("ABHA API Response Headers:", suggestion_response.headers)
-    print("ABHA API Response Content:", suggestion_response.text)
-    
-    if suggestion_response.status_code == 200:
-        response_data = suggestion_response.json()
-        print(response_data)
-        return JsonResponse(response_data, status=200)
+    if responsed_1:
+        return JsonResponse(responsed_1.json()) 
     else:
-        print("Failed response:", suggestion_response.text)
-        return Response({"error": suggestion_response.text}, status=suggestion_response.status_code)
+        return JsonResponse({"error": responsed_1.text}, status=400)
+    
+    # if responsed_1:
+    #     response_data_1 = responsed_1.json()
+    #     print(response_data_1)
+        
+    # Second GET request after first one succeeds
+    # responsed_2 = requests.get(
+    #     "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card",
+    #     headers={
+    #         "Authorization": f"Bearer {access_token}",
+    #         "REQUEST-ID": request_id,
+    #         "TIMESTAMP": timestamp,
+    #         "X-Token":f"Bearer {X_token}"
+    #     }
+    # )
+    # if responsed_2:
+    #     return JsonResponse(responsed_2.json()) 
+    # else:
+    #     return JsonResponse({"error": responsed_2.text}, status=400)
+
+    # if responsed_2:
+    #     response_data_2 = responsed_2.json()
+    #     print(response_data_2)
+    #     # Combine both responses
+    #     combined_response = { "account_data": response_data_1, "abha_card_data": response_data_2 }
+    #     return JsonResponse(combined_response)
+    # else:
+    #     print("Failed second response:", responsed_2.text)
+    #     return JsonResponse({"error": "Failed to fetch ABHA card data", "details": responsed_2.text}, status=400)
+
+    # else:
+    #     print("Failed first response:", responsed_1.text)
+    #     return JsonResponse({"error": "Failed to fetch account data", "details": responsed_1.text}, status=400)
