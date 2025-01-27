@@ -87,8 +87,8 @@ const NewBasicRegistation = () => {
   const [xToken, setXtoken] = useState("");
   const [responseData, setResponseData] = useState(null); // To store the data
   const [error, setError] = useState(null); 
-  const [popupVisible, setPopupVisible] = useState(false);
-
+  const[ABHA_Number,setABHA_Number]=useState('');
+  const [ABHAData,setABHAData] = useState([]);
 
 
   const [loading, setLoading] = useState(false);
@@ -97,6 +97,8 @@ const NewBasicRegistation = () => {
   const [expanded, setExpanded] = useState(false);
 
   console.log(PatientData, 'PatientData');
+  console.log(ABHAData,'ABHAData');
+
 
   const [patientsearch, setpatientsearch] = useState({
     Search: "",
@@ -209,6 +211,7 @@ const NewBasicRegistation = () => {
 
     Photo: null,
   });
+  console.log("RegisterData:",RegisterData)
 
   const formatLabel = (label) => {
     if (/[a-z]/.test(label) && /[A-Z]/.test(label) && !/\d/.test(label)) {
@@ -888,7 +891,8 @@ const NewBasicRegistation = () => {
   const HandleOnchange = async (e) => {
     const { name, value, pattern } = e.target;
 
-    const formattedValue = [
+    const formattedValue =
+    [
       "FirstName",
       "MiddleName",
       "SurName",
@@ -908,27 +912,27 @@ const NewBasicRegistation = () => {
       ? `${value.charAt(0).toUpperCase()}${value.slice(1)}`
       : value;
 
-    // Check length for specific fields
-    if (
-      [
-        "InsuranceName",
-        "ClientName",
-        "FirstName",
-        "MiddleName",
-        "AliasName",
-        "SurName",
-        "Occupation",
-        "NextToKinName",
-        "FamilyHeadName",
-        "Street",
-        "Area",
-        "City",
-        "District",
-        "State",
-        "Country",
-        "UHIDNo",
-      ].includes(name) &&
-      value.length > 30
+  // Check length for specific fields
+  if (
+    [
+      "InsuranceName",
+      "ClientName",
+      "FirstName",
+      "MiddleName",
+      "AliasName",
+      "SurName",
+      "Occupation",
+      "NextToKinName",
+      "FamilyHeadName",
+      "Street",
+      "Area",
+      "City",
+      "District",
+      "State",
+      "Country",
+      "UHIDNo",
+    ].includes(name) &&
+    value.length > 30
     ) {
       const tdata = {
         message: `${name} should not exceed 30 characters.`,
@@ -1651,6 +1655,10 @@ const ABHA_Mobile_OTP = async () => {
     const response = await axios.post(`${UrlLink}Frontoffice/ABHA_Mobile_OTP`, payload);
 
     console.log("Response from Mobile OTP server:", response.data);
+    console.log("response",response)
+    const ABHA_Number = response.data.ABHANumber;
+    setABHA_Number(ABHA_Number)
+    console.log("ABHA_Number:",ABHA_Number)
 
   } 
   catch (error) {
@@ -1702,83 +1710,234 @@ const ABHA_Address_Suggestion_API = () => {
 
    
 };
+
 // ----------------------------ABHA_card------------------------------------
 const ABHA_card = () => {  
-  const data_to_send ={
+  const data_to_send = {
     acctoken: accesstoken,
-    xToken:xToken
+    xToken: xToken
+  };
 
-  }
-  // setPopupVisible(true);
-  // setLoading(true); 
   axios.post(`${UrlLink}Frontoffice/ABHA_card`, data_to_send)
-  .then((Response) => {
-    console.log("Response from  API:", Response.data);
-  })
-  // .then(response1 => {
-  //   const responseData1 = response1.data;
-  //   console.log("First response:", responseData1);
-
-  //   const combinedData = {
-  //     account_data: responseData1,
-  //     // abha_card_data: responseData2,
-  //   };
-  //     setResponseData(combinedData);
-  //     setLoading(false);
-  // })
-  .catch(error => {
-    console.error("Error:", error);
-    alert("Error occurred while fetching data.");
-    setLoading(false); 
-  });
+    .then((response) => {
+      console.log("Response from API:", response.data);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      setError("Failed to fetch data. Please try again.");
+    });
+};
+// ----------------------------------------
+// const ABHA_card_get = ()=>{
   
-};
-const closePopup = () => {
-  setPopupVisible(false); // Close the popup
-  setResponseData(null); // Reset the response data
-  setError(null);
-};
-const styles = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  popup: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    width: '400px',
-    maxWidth: '90%',
-    textAlign: 'left',
-    position: 'relative',
-    overflowY: 'auto',
-  },
-  closeButton: {
-    backgroundColor: 'red',
-    color: 'white',
-    border: 'none',
-    padding: '5px 10px',
-    cursor: 'pointer',
-    borderRadius: '5px',
-    position: 'absolute',
-    top: '10px',
-    right: '10px',
-  },
-};
+// }
+useEffect(() => {
+
+  console.log("ABHA_card_get useEffect");
+
+  axios.get(`${UrlLink}Frontoffice/ABHA_card_get?Mobile_No=${RegisterData.PhoneNo}`)
+        .then((res) => {
+          const response = res.data;
+          console.log("response:",response);
+          console.log("response[].ABHANumber:",response[0].ABHANumber)
+          setRegisterData((prev)=>({
+
+            ...prev,
+              ABHA: response[0]?.ABHANumber,
+              // Title: response?.,
+              FirstName: response[0]?.name,
+              // MiddleName: "",
+              // SurName: "",
+              Gender: response[0]?.gender,
+              // MaritalStatus: "Single",
+              // SpouseName: "",
+              // FatherName: "",
+              DOB: response[0]?.dayOfBirth,
+              // Age: "",
+              // PhoneNo: response?.PhoneNo,
+              Email: response[0]?.email,
+              // BloodGroup: "",
+              // Occupation: "",
+              // Religion: "",
+              // Nationality: "",
+              // UHIDType: "",
+              // UHIDNo: "",
+              // PatientType: "",
+              Pincode: response[0]?.pincode,
+              // DoorNo: "",
+              // Street: "",
+              Area: response[0]?.townName,
+              City: response[0]?.subdistrictName,
+              District: response[0]?.subdistrictName,
+              State: response[0]?.status,
+              // Country: "",
+              // PermanentAddressSameAsAbove: "No",
+              PermanentAddress: response[0]?.address,
+          
+            }));
+        })
+        .catch((err) => console.log(err));
+      
+}, [RegisterData.PhoneNo]);
 
 
+
+useEffect(() => {
+  ABHA_card();  
+}, []); 
 // -----------------return---------------------------
   return (
     <div className="Main_container_app">
       <br />
+           {/* ----------------------UHID-------------------- */}
+
+           <Accordion expanded={expanded === "panel2"} onChange={handleChange("panel2")}>
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          aria-controls="panel2bh-content"
+          id="panel1bh-header"
+        >
+          <Typography sx={{ flexShrink: 0 }} id="panel1bh-header">
+            UHID
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography sx={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+
+            <div className="RegisFormcon" id="RegisFormcon_11" ref={gridRef}>
+
+              {UhidNo &&
+                UhidNo.map((field, index) => (
+                  <div className="RegisForm_1" key={index}>
+                    <label htmlFor={`${field}_${index}`}>
+                      {formatLabel(field)}
+                      <span>:</span>
+                    </label>
+                    {["UHIDType", "Nationality"].includes(field) ? (
+                      <select
+                        id={`${field}_${index}`}
+                        name={field}
+                        value={RegisterData[field]}
+                        onChange={HandleOnchange}
+                      >
+                        <option value="">Select</option>
+                        {field === "Nationality" &&
+                          ["Indian", "International"].map((row, indx) => (
+                            <option key={indx} value={row}>
+                              {row}
+                            </option>
+                          ))}
+                        {field === "UHIDType" &&
+                          (RegisterData.Nationality === "Indian"
+                            ? ["Aadhar", "VoterId", "SmartCard"]
+                            : ["DrivingLicence", "Passport"]
+                          ).map((row, indx) => (
+                            <option key={indx} value={row}>
+                              {row}
+                            </option>
+                          ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={`${field}_${index}`}
+                        autoComplete="off"
+                        type={field === "UHIDNo" ? "number" : "text"}
+                        name={field}
+                        pattern={field === "UHIDNo" ? "\\d{12}" : undefined}
+                        className={
+                          errors[field] === "Invalid"
+                            ? "invalid"
+                            : errors[field] === "Valid"
+                              ? "valid"
+                              : ""
+                        }
+                        required
+                        value={RegisterData[field]}
+                        onChange={HandleOnchange}
+                      />
+
+                    )}
+                    
+                    
+                  </div>
+                ))}
+                {/* Button to get OTP */}
+                <div className="Main_container_Btn"style={{width:"79px"}}>
+                      <button onClick={ABHAsubmit}>Get OTP</button>
+                    </div>
+
+                    {/* OTP Input Box */}
+                    {otpVisible && (
+                      <div className="RegisForm_1">
+                        <label htmlFor="otpInput">Enter OTP:</label>
+                        <input
+                          id="otpInput"
+                          type="text"
+                          maxLength={6}
+                          value={otp}
+                          onChange={handleOtpChange}
+                        />
+                        <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={handleOtpSubmit}>Submit OTP</button>
+                        </div>
+                        
+                      </div>
+                      
+                    )}
+                      <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={verifyOtpSubmit}>verify OTP</button>
+                      </div>
+                    {/* mobile OTP */}
+                    {MobileOtpVisible && (
+                      <div className="RegisForm_1">
+                        <label htmlFor="otpInput">Enter Mobile OTP:</label>
+                        <input
+                          id="otpInput"
+                          type="text"
+                          maxLength={6}
+                          name="Mobile_Otp"
+                          value={Mobile_Otp}
+                          onChange={handle_OtpChange}
+                        />
+                        <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={ABHA_Mobile_OTP}>Submit OTP</button>
+                        </div>
+                      </div>
+                      
+                    )} 
+                    <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={ABHA_Address_Suggestion_API}>Suggestion</button>
+                    </div>
+                    {/* ADD Abha Address */}
+                    <div className="RegisForm_1">
+                        <label htmlFor="otpInput">Abha Address:</label>
+                        <input
+                          id="otpInput"
+                          type="text"
+                          name="abhadd"
+                          value={abhadd}
+                          onChange={(e)=>setAbhaadd(e.target.value)}
+                        />
+                        <div className="Main_container_Btn" style={{width:"79px"}}>
+                        <button onClick={ABHA_Address_Suggestion_API}>Submit add</button>
+                        </div>
+                      </div>
+                      
+                      <div className="Main_container_Btn" style={{ width: "79px" }}>
+                        <button onClick={ABHA_card}>ABHA CARD</button>
+                      </div>
+
+                      {/* <div className="Main_container_Btn" style={{ width: "79px" }}>
+                        <button onClick={ABHA_card_get}>Fetch Data</button>
+                      </div> */}
+            </div>
+
+
+
+          </Typography>
+        </AccordionDetails>
+      </Accordion>
+ {/* ----------------------Personal Details-------------------- */}
       <Accordion
 
         expanded={
@@ -1799,7 +1958,7 @@ const styles = {
           </Typography>
         </AccordionSummary>
 
-        {/* ----------------------Personal Details-------------------- */}
+       
 
         <AccordionDetails>
           <Typography sx={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -1818,8 +1977,8 @@ const styles = {
                             {field === "Title" && "Title"}
                             {/* {field === 'Nationality' && 'Nationality'} */}
                             {field === "Gender" && "Gender"}
-                            {/* {field === 'UHIDType' && 'UHID Type'} */}
-                            {/* {field === 'UHIDNo' && 'UHID No'} */}
+                            {field === 'UHIDType' && 'UHID Type'}
+                            {field === 'UHIDNo' && 'UHID No'}
                             {field === "PhoneNo" && "Phone No"}
                             {field === "FirstName" && "First Name"}
                             <span className="requirreg12">*</span>{" "}
@@ -1867,7 +2026,7 @@ const styles = {
                       <select
                         id={`${field}_${index}`}
                         name={field}
-                        value={RegisterData[field]}
+                        value={RegisterData[field] || ''}
                         onChange={HandleOnchange}
                       >
                         <option value="">Select</option>
@@ -2054,7 +2213,7 @@ const styles = {
                             // && Object.keys(Registeredit).length !== 0
                           }
                           required={field !== "PatientId"}
-                          value={RegisterData[field]}
+                          value={RegisterData[field] || ''}
                           onChange={HandleOnchange}
                         />
                       </div>
@@ -2184,7 +2343,7 @@ const styles = {
                               : ""
                         }
                         required
-                        value={RegisterData[field]}
+                        value={RegisterData[field] || ''}
                         onKeyDown={
                           [
                             "MiddleName",
@@ -2214,173 +2373,7 @@ const styles = {
       </Accordion>
 
 
-      {/* ----------------------UHID-------------------- */}
-
-      <Accordion expanded={expanded === "panel2"} onChange={handleChange("panel2")}>
-        <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
-          aria-controls="panel2bh-content"
-          id="panel1bh-header"
-        >
-          <Typography sx={{ flexShrink: 0 }} id="panel1bh-header">
-            UHID
-          </Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Typography sx={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-
-            <div className="RegisFormcon" id="RegisFormcon_11" ref={gridRef}>
-
-              {UhidNo &&
-                UhidNo.map((field, index) => (
-                  <div className="RegisForm_1" key={index}>
-                    <label htmlFor={`${field}_${index}`}>
-                      {formatLabel(field)}
-                      <span>:</span>
-                    </label>
-                    {["UHIDType", "Nationality"].includes(field) ? (
-                      <select
-                        id={`${field}_${index}`}
-                        name={field}
-                        value={RegisterData[field]}
-                        onChange={HandleOnchange}
-                      >
-                        <option value="">Select</option>
-                        {field === "Nationality" &&
-                          ["Indian", "International"].map((row, indx) => (
-                            <option key={indx} value={row}>
-                              {row}
-                            </option>
-                          ))}
-                        {field === "UHIDType" &&
-                          (RegisterData.Nationality === "Indian"
-                            ? ["Aadhar", "VoterId", "SmartCard"]
-                            : ["DrivingLicence", "Passport"]
-                          ).map((row, indx) => (
-                            <option key={indx} value={row}>
-                              {row}
-                            </option>
-                          ))}
-                      </select>
-                    ) : (
-                      <input
-                        id={`${field}_${index}`}
-                        autoComplete="off"
-                        type={field === "UHIDNo" ? "number" : "text"}
-                        name={field}
-                        pattern={field === "UHIDNo" ? "\\d{12}" : undefined}
-                        className={
-                          errors[field] === "Invalid"
-                            ? "invalid"
-                            : errors[field] === "Valid"
-                              ? "valid"
-                              : ""
-                        }
-                        required
-                        value={RegisterData[field]}
-                        onChange={HandleOnchange}
-                      />
-
-                    )}
-                    
-                    
-                  </div>
-                ))}
-                {/* Button to get OTP */}
-                <div className="Main_container_Btn">
-                      <button onClick={ABHAsubmit}>Get OTP</button>
-                    </div>
-
-                    {/* OTP Input Box */}
-                    {otpVisible && (
-                      <div className="RegisForm_1">
-                        <label htmlFor="otpInput">Enter OTP:</label>
-                        <input
-                          id="otpInput"
-                          type="text"
-                          maxLength={6}
-                          value={otp}
-                          onChange={handleOtpChange}
-                        />
-                        <div className="Main_container_Btn" style={{width:"79px"}}>
-                        <button onClick={handleOtpSubmit}>Submit OTP</button>
-                        </div>
-                        
-                      </div>
-                      
-                    )}
-                      {/* <div className="Main_container_Btn" style={{width:"79px"}}>
-                        <button onClick={verifyOtpSubmit}>verify OTP</button>
-                      </div> */}
-                    {/* mobile OTP */}
-                    {/* {MobileOtpVisible && (
-                      <div className="RegisForm_1">
-                        <label htmlFor="otpInput">Enter Mobile OTP:</label>
-                        <input
-                          id="otpInput"
-                          type="text"
-                          maxLength={6}
-                          name="Mobile_Otp"
-                          value={Mobile_Otp}
-                          onChange={handle_OtpChange}
-                        />
-                        <div className="Main_container_Btn" style={{width:"79px"}}>
-                        <button onClick={ABHA_Mobile_OTP}>Submit OTP</button>
-                        </div>
-                      </div>
-                      
-                    )}  */}
-                    {/* <div className="Main_container_Btn" style={{width:"79px"}}>
-                        <button onClick={ABHA_Address_Suggestion_API}>Suggestion</button>
-                    </div> */}
-
-                    {/* <div className="RegisForm_1">
-                        <label htmlFor="otpInput">Abha Address:</label>
-                        <input
-                          id="otpInput"
-                          type="text"
-                          name="abhadd"
-                          value={abhadd}
-                          onChange={(e)=>setAbhaadd(e.target.value)}
-                        />
-                        <div className="Main_container_Btn" style={{width:"79px"}}>
-                        <button onClick={ABHA_Address_Suggestion_API}>Submit add</button>
-                        </div>
-                      </div>
-                       */}
-                    <div className="Main_container_Btn" style={{width:"79px"}}>
-                        <button onClick={ABHA_card}>ABHA CARD</button>
-                    </div>
-
-                    {/* {popupVisible && (
-                      <div style={styles.overlay}>
-                        <div style={styles.popup}>
-                          <button style={styles.closeButton} onClick={closePopup}>Close</button>
-
-                          {loading && <p>Loading data...</p>}
-
-                          {error && <p style={{ color: 'red' }}>{error}</p>}
-
-                          {responseData && (
-                            <div>
-                              <h3>Account Data:</h3>
-                              <pre>{JSON.stringify(responseData.account_data, null, 2)}</pre>
-
-                              <h3>ABHA Card Data:</h3>
-                              <pre>{JSON.stringify(responseData.abha_card_data, null, 2)}</pre>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )} 
-                    */}
-            </div>
-
-
-
-          </Typography>
-        </AccordionDetails>
-      </Accordion>
+ 
 
 
 

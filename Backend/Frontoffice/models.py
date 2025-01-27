@@ -1275,3 +1275,42 @@ class Advance_Collection_IP(models.Model):
     updated_by = models.CharField(max_length=30,default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+#----------------------------------- ABHA --------------------------
+class ABHA_Collectin_Data(models.Model):
+    ABHA_RegID = models.IntegerField(primary_key=True)
+    
+    ABHANumber = models.CharField(max_length=20)
+    preferredAbhaAddress = models.CharField(max_length=255)
+    name = models.CharField(max_length=100)
+    address = models.TextField()
+    createdDate = models.DateField()
+    
+    dayOfBirth = models.DateField()
+    
+    districtName = models.CharField(max_length=100)
+    email = models.EmailField(max_length=255)
+    gender = models.CharField(max_length=1)
+    pincode = models.CharField(max_length=255,null=True,blank=True)
+    mobile=models.CharField(max_length=255,null=True,blank=True)
+    mobileVerified = models.BooleanField()
+    stateName = models.CharField(max_length=100)
+    status = models.CharField(max_length=20)
+    subdistrictName = models.CharField(max_length=100)
+    townName = models.CharField(max_length=100)
+    verificationType = models.CharField(max_length=20)
+    
+    
+    class Meta:
+        db_table = 'ABHA_Collectin_Data'
+    
+    def save(self, *args, **kwargs):
+        if not self.ABHA_RegID:
+            max_id = ABHA_Collectin_Data.objects.aggregate(
+                max_id=Max('ABHA_RegID')
+            )['max_id']
+            self.ABHA_RegID = (max_id or 0) + 1
+        super().save(*args, **kwargs)
+    
+        
+    

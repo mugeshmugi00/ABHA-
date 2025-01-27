@@ -136,7 +136,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         # 'NAME': 'Silverline_17_01_2025',
-        'NAME': 'vesoft_hims_07_33',
+        'NAME': 'vesoft_hims_07_33_1',
         'USER': 'root',
         'PASSWORD': '12345678',
         'HOST': 'localhost',

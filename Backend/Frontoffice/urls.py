@@ -186,4 +186,5 @@ urlpatterns=[
     path('ABHA_Mobile_OTP',ABHA_Mobile_OTP,name='ABHA_Mobile_OTP'),
     path('ABHA_Address_Suggestion_API',ABHA_Address_Suggestion_API,name='ABHA_Address_Suggestion_API'),
     path('ABHA_card',ABHA_card,name='ABHA_card'),
+    path('ABHA_card_get',ABHA_card_get,name='ABHA_card_get'),
     ]

@@ -8246,6 +8246,11 @@ from cryptography.hazmat.backends import default_backend
 import base64
 from datetime import datetime
 import uuid
+import json
+# from rest_framework.exceptions import IntegrityError
+from .models import *
+
+from django.db.models import Max
 
 
 @api_view(['POST'])
@@ -8748,6 +8753,8 @@ def ABHA_Address_Suggestion_API(request):
     
     
 # -----------------------------------ABHA_card-----------------------------------------
+
+
 @api_view(['POST'])
 @csrf_exempt
 def ABHA_card(request):
@@ -8755,56 +8762,139 @@ def ABHA_card(request):
     access_token = data.get('acctoken')
     X_token = data.get('xToken')
     
-    print("X_token",X_token)
-    print("access_token",access_token)
+    print("X_token:", X_token)
+    print("access_token:", access_token)
     
     request_id = str(uuid.uuid4())
     timestamp = datetime.utcnow().isoformat() + 'Z'
     
-    # First GET request
-    responsed_1 = requests.get(
+    # First GET request to fetch ABHA data
+    response_1 = requests.get(
         "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account",
         headers={
             "Authorization": f"Bearer {access_token}",
             "REQUEST-ID": request_id,
             "TIMESTAMP": timestamp,
-            "X-Token":f"Bearer {X_token}"
+            "X-Token": f"Bearer {X_token}"
         }
     )
-    if responsed_1:
-        return JsonResponse(responsed_1.json()) 
-    else:
-        return JsonResponse({"error": responsed_1.text}, status=400)
+
+    # if response_1:
+    response_data = response_1.json()
     
-    # if responsed_1:
-    #     response_data_1 = responsed_1.json()
-    #     print(response_data_1)
+    print("Response from API:", response_1.json())
+
+
+    # Extracting the necessary data to save into the database
+    abha_Number = response_data.get('ABHANumber', '')
+    print("abha_Number:",abha_Number)
+    
+    abha_address = response_data.get('preferredAbhaAddress', '')
+    name = response_data.get('name', '')
+    address = response_data.get('address', '')
+    created_date = response_data.get('createdDate', '')
+
+    created_date_obj = datetime.strptime(created_date, "%d-%m-%Y").date() if created_date else None
+    
+    day_of_birth = response_data.get('dayOfBirth', '')
+    month_of_birth = response_data.get('monthOfBirth', '')
+    year_of_birth = response_data.get('yearOfBirth', '')
+    
+    print("day_of_birth:",day_of_birth)
+    print("month_of_birth:",month_of_birth)
+    print("year_of_birth:",year_of_birth)
+    
+    district_name = response_data.get('districtName', '')
+    email = response_data.get('email', '')
+    gender = response_data.get('gender', '')
+    pincode = response_data.get('pincode', '')
+    mobile = response_data.get('mobile', '')
+    mobile_verified = response_data.get('mobileVerified', False)
+    state_name = response_data.get('stateName', '')
+    status = response_data.get('status', '')
+    subdistrict_name = response_data.get('subdistrictName', '')
+    town_name = response_data.get('townName', '')
+    verification_type = response_data.get('verificationType', '')
+    birth_date = datetime(year=int(year_of_birth), month=int(month_of_birth), day=int(day_of_birth)).date()
+    
+    existing_data = ABHA_Collectin_Data.objects.filter(mobile=mobile).first()
+    if existing_data:
+        print("Record already exists for mobile:", mobile)
+        return JsonResponse({"message": "Record already exists for the given mobile number."}, status=400)
+
+
+    # Create a new ABHA record in the database
+    abha_data = ABHA_Collectin_Data.objects.create(
+        ABHA_RegID=None,  # Let the save method handle auto-increment
+        ABHANumber=abha_Number,
+        preferredAbhaAddress=abha_address,
+        mobile=mobile,
+        name=name,
+        address=address,
+        createdDate=created_date_obj,
         
-    # Second GET request after first one succeeds
-    # responsed_2 = requests.get(
-    #     "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card",
-    #     headers={
-    #         "Authorization": f"Bearer {access_token}",
-    #         "REQUEST-ID": request_id,
-    #         "TIMESTAMP": timestamp,
-    #         "X-Token":f"Bearer {X_token}"
-    #     }
-    # )
-    # if responsed_2:
-    #     return JsonResponse(responsed_2.json()) 
-    # else:
-    #     return JsonResponse({"error": responsed_2.text}, status=400)
+        dayOfBirth=birth_date,  
+        
+        districtName=district_name,
+        email=email,
+        gender=gender,
+        pincode=pincode,
+        mobileVerified=mobile_verified,
+        stateName=state_name,
+        status=status,
+        subdistrictName=subdistrict_name,
+        townName=town_name,
+        verificationType=verification_type
+    )
+    abha_data.save()
+    print("abha_data:", abha_data)
 
-    # if responsed_2:
-    #     response_data_2 = responsed_2.json()
-    #     print(response_data_2)
-    #     # Combine both responses
-    #     combined_response = { "account_data": response_data_1, "abha_card_data": response_data_2 }
-    #     return JsonResponse(combined_response)
+    # Return the saved data as a success response
+    if response_1:
+        return JsonResponse(response_1.json())  # Return the successful response from POST
+    else:
+        return JsonResponse({"error": response_1.text}, status=400)
+    
     # else:
-    #     print("Failed second response:", responsed_2.text)
-    #     return JsonResponse({"error": "Failed to fetch ABHA card data", "details": responsed_2.text}, status=400)
+    #     return JsonResponse({"error": response_1.json()}, status=400)
 
-    # else:
-    #     print("Failed first response:", responsed_1.text)
-    #     return JsonResponse({"error": "Failed to fetch account data", "details": responsed_1.text}, status=400)
+# ---------------------------------
+@api_view(['GET'])
+@csrf_exempt
+def ABHA_card_get(request):
+    if request.method == 'GET':
+        try:
+            MobileNo = request.GET.get('Mobile_No', None)
+            ip_request_ins = ABHA_Collectin_Data.objects.filter(mobile=MobileNo)
+            iprequest_list = []
+            for datas in ip_request_ins:
+                print(datas.mobile)
+                data_list = {
+
+                    'ABHA_RegID':datas.ABHA_RegID,
+                    'ABHANumber':datas.ABHANumber,
+                    'preferredAbhaAddress':datas.preferredAbhaAddress,
+                    'name':datas.name,
+                    'address':datas.address,
+                    'createdDate':datas.createdDate,
+                    'dayOfBirth':datas.dayOfBirth,
+                    'districtName':datas.districtName,
+                    'email':datas.email,
+                    'gender':datas.gender,
+                    'pincode':datas.pincode,
+                    'mobile':datas.mobile,
+                    'mobileVerified':datas.mobileVerified,
+                    'stateName':datas.stateName,
+                    'status':datas.status,
+                    'subdistrictName':datas.subdistrictName,
+                    'townName':datas.townName,
+                    'verificationType':datas.verificationType,
+
+                }
+                iprequest_list.append(data_list)
+
+            return JsonResponse(iprequest_list,safe=False)
+
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            return JsonResponse({'error': 'An internal server error occurred'}, status=500)
